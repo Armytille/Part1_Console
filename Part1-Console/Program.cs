@@ -23,27 +23,27 @@ namespace Part1_Console
             {
                 csv.Read();
                 csv.ReadHeader();
-                
-                try
-                {
-                    if (File.Exists(OutPath))
-                        File.Delete(OutPath);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
 
-                while (csv.Read())
-                {
-                    try
+                using (new CreateJson(OutPath))
+                    while (csv.Read())
                     {
-                        if ((csv.GetField<int>("columnC") + csv.GetField<int>("columnD")) <= 100) continue;
-                        using (var file = new StreamWriter(OutPath, true))
-                            file.WriteLine(csv.GetField<string>("columnA") + csv.GetField<string>("columnB"));
+                        try
+                        {
+                            var sumCD = csv.GetField<int>("columnC") + csv.GetField<int>("columnD");
+
+                            if (sumCD <= 100) continue;
+                            using (var file = new StreamWriter(OutPath, true))
+                                file.WriteLine($@"{{""lineNumber"":{csv.GetFieldIndex("columnA")},"
+                                               + @"""type"": ""ok"", ""concatAB"":"
+                                               + $@"""{csv.GetField<string>("columnA") + csv.GetField<string>("columnB")}"","
+                                               + $@"""sumCD"": {sumCD} }},");
+                        }
+                        catch (CsvHelper.TypeConversion.TypeConverterException exception)
+                        {
+                            using (var file = new StreamWriter(OutPath, true))
+                                file.WriteLine($@"{{ ""lineNumber"": {csv.GetFieldIndex("columnA")}, ""type"": ""error"", ""errorMessage"": {exception} }},");
+                        }
                     }
-                    catch (CsvHelper.TypeConversion.TypeConverterException) {/*Ignored*/}
-                }
             }
         }
     }
