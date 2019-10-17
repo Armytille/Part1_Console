@@ -3,18 +3,19 @@ using System.IO;
 
 namespace Part1_Console
 {
-    public class CreateJson : IDisposable
+    public class JsonSupport : IDisposable
     {
-        private readonly string _outputPath;
+        private readonly StreamWriter _sw;
+        private readonly string _format;
 
-        public CreateJson(string outputPath)
+        public JsonSupport(StreamWriter sw, string format)
         {
-            _outputPath = outputPath;
-
+            _sw = sw;
+            _format = format;
             try
             {
-                using (var file = new StreamWriter(outputPath, true))
-                    file.WriteLine("[");
+                if (_format.Equals("json"))
+                    _sw.WriteLine("[");
             }
             catch (Exception e)
             {
@@ -26,8 +27,8 @@ namespace Part1_Console
         {
             try
             {
-                using (var file = new StreamWriter(_outputPath, true))
-                    file.WriteLine("]");
+                if (_format.Equals("json"))
+                    _sw.WriteLine("]");
             }
             catch (Exception e)
             {

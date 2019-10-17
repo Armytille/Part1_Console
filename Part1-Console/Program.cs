@@ -42,83 +42,49 @@ namespace Part1_Console
                 });
         }
 
-        private static void ArchiveOutput(string csvPath, string outPath, Action<CsvReader, StreamWriter> formatMethod)
-        {
-            using (var zipToOpen = new FileStream(Path.ChangeExtension(outPath, "zip"), FileMode.OpenOrCreate))
-            {
-                using (var archive = new ZipArchive(zipToOpen, ZipArchiveMode.Update))
-                {
-                    var resultEntry = archive.CreateEntry(Path.GetFileName(outPath));
-
-                    using (var file = new StreamWriter(resultEntry.Open()))
-                        ParseCsv(csvPath, file, formatMethod);
-                }
-            }
-        }
-
-        private static void WritePlainTextToFile(CsvReader csv, StreamWriter file)
+        private static void WriteToFile(CsvReader csv, StreamWriter file, string format)
         {
             try
             {
                 var sumCD = csv.GetField<int>("columnC") + csv.GetField<int>("columnD");
 
                 if (sumCD <= 100) return;
-                file.WriteLine($@"lineNumber : {csv.GetFieldIndex("columnA")},"
-                                   + @"type : ok , concatAB :"
-                                   + $@"{csv.GetField<string>("columnA") + csv.GetField<string>("columnB")},"
-                                   + $@"sumCD: {sumCD} ,");
+
+                var line = format.Equals("json") ? $@"{{""lineNumber"":{csv.GetFieldIndex("columnA")},"
+                                                   + @"""type"": ""ok"", ""concatAB"":"
+                                                   + $@"""{csv.GetField<string>("columnA") + csv.GetField<string>("columnB")}"","
+                                                   + $@"""sumCD"": {sumCD} }}," :
+                            format.Equals("txt") ? $@"lineNumber : {csv.GetFieldIndex("columnA")},"
+                                           + @"type : ok , concatAB :"
+                                           + $@"{csv.GetField<string>("columnA") + csv.GetField<string>("columnB")},"
+                                           + $@"sumCD: {sumCD} ,"
+                            : "No format";
+                file.WriteLine(line);
             }
             catch (CsvHelper.TypeConversion.TypeConverterException exception)
             {
-                file.WriteLine($@"lineNumber : {csv.GetFieldIndex("columnA")}, type : error , errorMessage : {exception},");
+                var line = format.Equals("json") ? $@"{{ ""lineNumber"": {csv.GetFieldIndex("columnA")}, ""type"": ""error"", ""errorMessage"": {exception} }},"
+                    : format.Equals("txt") ? $@"lineNumber : {csv.GetFieldIndex("columnA")}, type : error , errorMessage : {exception},"
+                    : "No format";
+                file.WriteLine(line);
             }
         }
 
-        private static void WriteJsonArrayToFile(CsvReader csv, StreamWriter file)
-        {
-            try
-            {
-                var sumCD = csv.GetField<int>("columnC") + csv.GetField<int>("columnD");
-
-                if (sumCD <= 100) return;
-                file.WriteLine($@"{{""lineNumber"":{csv.GetFieldIndex("columnA")},"
-                                   + @"""type"": ""ok"", ""concatAB"":"
-                                   + $@"""{csv.GetField<string>("columnA") + csv.GetField<string>("columnB")}"","
-                                   + $@"""sumCD"": {sumCD} }},");
-            }
-            catch (CsvHelper.TypeConversion.TypeConverterException exception)
-            {
-                file.WriteLine($@"{{ ""lineNumber"": {csv.GetFieldIndex("columnA")}, ""type"": ""error"", ""errorMessage"": {exception} }},");
-            }
-        }
 
         public static void ParseCsv(string path, string outPath, string format, bool zipMode)
         {
-            switch (format)
+            if (zipMode)
             {
-                case "json":
-
-                    if (zipMode)
-                        ArchiveOutput(path, outPath, WriteJsonArrayToFile);
-                    else
-                        using (new CreateJson(outPath))
-                        using (var file = new StreamWriter(outPath, true))
-                            ParseCsv(path, file, WriteJsonArrayToFile);
-                    break;
-                case "txt":
-                    if (zipMode)
-                        ArchiveOutput(path, outPath, WritePlainTextToFile);
-                    else
-                        using (var file = new StreamWriter(outPath, true))
-                            ParseCsv(path, file, WritePlainTextToFile);
-                    break;
-                default:
-                    Console.WriteLine("No output format. Will return.");
-                    return;
+                ZipSupport.ArchiveOutput(path, outPath, format, WriteToFile);
+                return;
             }
+
+            using (var file = new StreamWriter(outPath, true))
+            using (new JsonSupport(file, format))
+                ParseCsv(path, file, format, WriteToFile);
         }
 
-        private static void ParseCsv(string path, StreamWriter file, Action<CsvReader, StreamWriter> formatMethod)
+        internal static void ParseCsv(string path, StreamWriter file, string format, Action<CsvReader, StreamWriter, string> formatMethod)
         {
             using (var reader = new StreamReader(path))
             using (var csv = new CsvReader(reader))
@@ -127,7 +93,7 @@ namespace Part1_Console
                 csv.ReadHeader();
 
                 while (csv.Read())
-                    formatMethod(csv, file);
+                    formatMethod(csv, file, format);
             }
         }
     }
