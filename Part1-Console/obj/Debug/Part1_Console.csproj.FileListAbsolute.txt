@@ -10,3 +10,6 @@ C:\Users\Phantom 530\source\repos\Part1-Console\Part1-Console\obj\Debug\Part1_Co
 C:\Users\Phantom 530\source\repos\Part1-Console\Part1-Console\obj\Debug\Part1-Console.exe
 C:\Users\Phantom 530\source\repos\Part1-Console\Part1-Console\obj\Debug\Part1-Console.pdb
 C:\Users\Phantom 530\source\repos\Part1-Console\Part1-Console\obj\Debug\Part1_Console.csprojAssemblyReference.cache
+C:\Users\Phantom 530\source\repos\Part1-Console\Part1-Console\bin\Debug\CommandLine.dll
+C:\Users\Phantom 530\source\repos\Part1-Console\Part1-Console\bin\Debug\CommandLine.xml
+C:\Users\Phantom 530\source\repos\Part1-Console\Part1-Console\bin\Debug\System.IO.Compression.dll

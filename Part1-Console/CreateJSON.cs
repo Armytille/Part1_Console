@@ -13,9 +13,6 @@ namespace Part1_Console
 
             try
             {
-                if (File.Exists(outputPath))
-                    File.Delete(outputPath);
-
                 using (var file = new StreamWriter(outputPath, true))
                     file.WriteLine("[");
             }
