@@ -1,6 +1,5 @@
-﻿using System;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ProgramTest
 {
@@ -13,15 +12,15 @@ namespace ProgramTest
         private static readonly string OutPath = Path.Combine(Path.GetTempPath(), "result.json");
 
         [TestMethod]
-        public void P1Step1Test()
+        public void ParseCsvTest()
         {
             Part1_Console.Program.ParseCsv(CsvPath, OutPath, "json", false);
             Assert.IsTrue(File.Exists(OutPath));
             var result = File.ReadAllText(OutPath);
             /*Pas vraiment satisfait de cette solution*/
-            Assert.IsTrue(result.Contains("[\r\n{\"lineNumber\":1,\"type\": \"ok\"," +
-                                                        " \"concatAB\":\"OK\",\"sumCD\": 103 },\r\n{ \"lineNumber\": 1," +
-                                                        " \"type\": \"error\", \"errorMessage\": CsvHelper.TypeConversion.TypeConverterException:"));
+            Assert.IsTrue(string.CompareOrdinal(result, "[\r\n{\"LineNumber\":1,\"Type\":\"ok\",\"ConcatAb\":\"OK\",\"SumCd\":103}," +
+                                          "\r\n{\"LineNumber\":0,\"Type\":\"error\",\"ErrorMessage\":\"The conversion cannot be performed.\\r\\n" +
+                                          "    Text: '#number'\\r\\n    MemberType: \\r\\n    TypeConverter: 'CsvHelper.TypeConversion.Int32Converter'\"}\r\n]\r\n") == 0);
         }
     }
 }

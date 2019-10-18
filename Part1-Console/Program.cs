@@ -1,44 +1,27 @@
 ﻿using System;
 using CsvHelper;
 using System.IO;
-using System.IO.Compression;
 using CommandLine;
+using Newtonsoft.Json;
 
 namespace Part1_Console
 {
     public class Program
     {
-        private static readonly string WorkingDirectory = Directory.GetCurrentDirectory();
-        private static readonly string ProjectDirectory = Directory.GetParent(WorkingDirectory).Parent?.FullName;
-        private static readonly string CsvPath = Path.Combine(ProjectDirectory, "bigfile.csv");
-
         private static void Main(string[] args)
         {
-            string[] paths =
-                {
-                    Path.Combine(Path.GetTempPath(), "result.txt"),
-                    Path.Combine(Path.GetTempPath(), "result.json"),
-                    Path.Combine(Path.GetTempPath(), "result.zip")
-                };
-
-            try
-            {
-                foreach (var path in paths)
-                    if (File.Exists(path))
-                        File.Delete(path);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
             Parser.Default.ParseArguments<Options>(args)
                 .WithParsed(o =>
                 {
+                    var guid = Guid.NewGuid();
+                    Directory.CreateDirectory(o.OutputPath);
+
                     if (o.Txt)
-                        ParseCsv(CsvPath, paths[0], "txt", o.Zip);
+                        ParseCsv(o.CsvPath, Path.Combine(o.OutputPath, $"{guid}.txt"), "txt", o.Zip);
                     if (o.Json)
-                        ParseCsv(CsvPath, paths[1], "json", o.Zip);
+                        ParseCsv(o.CsvPath, Path.Combine(o.OutputPath, $"{guid}.json"), "json", o.Zip);
+                    if (o.Xml)
+                        ParseCsv(o.CsvPath, Path.Combine(o.OutputPath, $"{guid}.xml"), "xml", o.Zip);
                 });
         }
 
@@ -47,29 +30,26 @@ namespace Part1_Console
             try
             {
                 var sumCD = csv.GetField<int>("columnC") + csv.GetField<int>("columnD");
-
                 if (sumCD <= 100) return;
 
-                var line = format.Equals("json") ? $@"{{""lineNumber"":{csv.GetFieldIndex("columnA")},"
-                                                   + @"""type"": ""ok"", ""concatAB"":"
-                                                   + $@"""{csv.GetField<string>("columnA") + csv.GetField<string>("columnB")}"","
-                                                   + $@"""sumCD"": {sumCD} }}," :
-                            format.Equals("txt") ? $@"lineNumber : {csv.GetFieldIndex("columnA")},"
-                                           + @"type : ok , concatAB :"
-                                           + $@"{csv.GetField<string>("columnA") + csv.GetField<string>("columnB")},"
-                                           + $@"sumCD: {sumCD} ,"
-                            : "No format";
-                file.WriteLine(line);
+                var data = new Data(csv.GetFieldIndex("columnA"), "ok",
+                    csv.GetField<string>("columnA") + csv.GetField<string>("columnB"), sumCD);
+                var line = format.Equals("json") ? JsonConvert.SerializeObject(data)
+                    : format.Equals("txt") ? data.ToString() 
+                    : format.Equals("xml") ? XmlConverter.Serialize(data)
+                    : "No format";
+                file.WriteLine(line + ",");
             }
             catch (CsvHelper.TypeConversion.TypeConverterException exception)
             {
-                var line = format.Equals("json") ? $@"{{ ""lineNumber"": {csv.GetFieldIndex("columnA")}, ""type"": ""error"", ""errorMessage"": {exception} }},"
-                    : format.Equals("txt") ? $@"lineNumber : {csv.GetFieldIndex("columnA")}, type : error , errorMessage : {exception},"
+                var onErrorData = new OnErrorData(csv.GetFieldIndex("columnA"), "error", exception.Message);
+                var line = format.Equals("json") ? JsonConvert.SerializeObject(onErrorData) 
+                    : format.Equals("txt") ? onErrorData.ToString()
+                    : format.Equals("xml") ? XmlConverter.Serialize(onErrorData)
                     : "No format";
                 file.WriteLine(line);
             }
         }
-
 
         public static void ParseCsv(string path, string outPath, string format, bool zipMode)
         {
@@ -79,7 +59,7 @@ namespace Part1_Console
                 return;
             }
 
-            using (var file = new StreamWriter(outPath, true))
+            using (var file = new StreamWriter(outPath, false))
             using (new JsonSupport(file, format))
                 ParseCsv(path, file, format, WriteToFile);
         }
